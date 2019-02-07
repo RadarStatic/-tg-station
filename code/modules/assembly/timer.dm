@@ -1,108 +1,133 @@
-/obj/item/device/assembly/timer
+/obj/item/assembly/timer
 	name = "timer"
 	desc = "Used to time things. Works well with contraptions which has to count down. Tick tock."
 	icon_state = "timer"
-	m_amt = 500
-	g_amt = 50
-	origin_tech = "magnets=1"
+	materials = list(MAT_METAL=500, MAT_GLASS=50)
+	attachable = TRUE
 
-	secured = 0
-
-	var/timing = 0
+	var/timing = FALSE
 	var/time = 5
+	var/saved_time = 5
+	var/loop = FALSE
+	var/hearing_range = 3
 
-	proc
-		timer_end()
+/obj/item/assembly/timer/suicide_act(mob/living/user)
+	user.visible_message("<span class='suicide'>[user] looks at the timer and decides [user.p_their()] fate! It looks like [user.p_theyre()] going to commit suicide!</span>")
+	activate()//doesnt rely on timer_end to prevent weird metas where one person can control the timer and therefore someone's life. (maybe that should be how it works...)
+	addtimer(CALLBACK(src, .proc/manual_suicide, user), time*10)//kill yourself once the time runs out
+	return MANUAL_SUICIDE
 
-	describe()
-		if(timing)
-			return "The timer is counting down from [time]!"
-		return "The timer is set for [time] seconds."
+/obj/item/assembly/timer/proc/manual_suicide(mob/living/user)
+	user.visible_message("<span class='suicide'>[user]'s time is up!</span>")
+	user.adjustOxyLoss(200)
+	user.death(0)
 
-	activate()
-		if(!..())	return 0//Cooldown check
-		timing = !timing
-		update_icon()
-		return 0
+/obj/item/assembly/timer/Initialize()
+	. = ..()
+	START_PROCESSING(SSobj, src)
 
+/obj/item/assembly/timer/Destroy()
+	STOP_PROCESSING(SSobj, src)
+	. = ..()
 
-	toggle_secure()
-		secured = !secured
-		if(secured)
-			processing_objects.Add(src)
-		else
-			timing = 0
-			processing_objects.Remove(src)
-		update_icon()
-		return secured
+/obj/item/assembly/timer/examine(mob/user)
+	..()
+	to_chat(user, "<span class='notice'>The timer is [timing ? "counting down from [time]":"set for [time] seconds"].</span>")
 
-
-	timer_end()
-		if((!secured)||(cooldown > 0))	return 0
-		pulse(0)
-		visible_message("\icon[src] *beep* *beep*", "*beep* *beep*")
-		cooldown = 2
-		spawn(10)
-			process_cooldown()
-		return
-
-
-	process()
-		if(timing && (time > 0))
-			time--
-		if(timing && time <= 0)
-			timing = 0
-			timer_end()
-			time = initial(time)
-		return
-
-
+/obj/item/assembly/timer/activate()
+	if(!..())
+		return FALSE//Cooldown check
+	timing = !timing
 	update_icon()
-		overlays.Cut()
-		attached_overlays = list()
-		if(timing)
-			overlays += "timer_timing"
-			attached_overlays += "timer_timing"
-		if(holder)
-			holder.update_icon()
+	return TRUE
+
+
+/obj/item/assembly/timer/toggle_secure()
+	secured = !secured
+	if(secured)
+		START_PROCESSING(SSobj, src)
+	else
+		timing = FALSE
+		STOP_PROCESSING(SSobj, src)
+	update_icon()
+	return secured
+
+
+/obj/item/assembly/timer/proc/timer_end()
+	if(!secured || next_activate > world.time)
+		return FALSE
+	pulse(FALSE)
+	audible_message("[icon2html(src, hearers(src))] *beep* *beep* *beep*", null, hearing_range)
+	for(var/CHM in get_hearers_in_view(hearing_range, src))
+		if(ismob(CHM))
+			var/mob/LM = CHM
+			LM.playsound_local(get_turf(src), 'sound/machines/triple_beep.ogg', ASSEMBLY_BEEP_VOLUME, TRUE)
+	if(loop)
+		timing = TRUE
+	update_icon()
+
+
+/obj/item/assembly/timer/process()
+	if(!timing)
 		return
+	time--
+	if(time <= 0)
+		timing = FALSE
+		timer_end()
+		time = saved_time
 
 
-	interact(mob/user as mob)//TODO: Have this use the wires
-		if(!secured)
-			user.show_message("\red The [name] is unsecured!")
-			return 0
+/obj/item/assembly/timer/update_icon()
+	cut_overlays()
+	attached_overlays = list()
+	if(timing)
+		add_overlay("timer_timing")
+		attached_overlays += "timer_timing"
+	if(holder)
+		holder.update_icon()
+
+
+/obj/item/assembly/timer/ui_interact(mob/user)//TODO: Have this use the wires
+	. = ..()
+	if(is_secured(user))
 		var/second = time % 60
 		var/minute = (time - second) / 60
-		var/dat = text("<TT><B>Timing Unit</B>\n[] []:[]\n<A href='?src=\ref[];tp=-30'>-</A> <A href='?src=\ref[];tp=-1'>-</A> <A href='?src=\ref[];tp=1'>+</A> <A href='?src=\ref[];tp=30'>+</A>\n</TT>", (timing ? text("<A href='?src=\ref[];time=0'>Timing</A>", src) : text("<A href='?src=\ref[];time=1'>Not Timing</A>", src)), minute, second, src, src, src, src)
-		dat += "<BR><BR><A href='?src=\ref[src];refresh=1'>Refresh</A>"
-		dat += "<BR><BR><A href='?src=\ref[src];close=1'>Close</A>"
-		user << browse(dat, "window=timer")
-		onclose(user, "timer")
+		var/dat = "<TT><B>Timing Unit</B></TT>"
+		dat += "<BR>[(timing ? "<A href='?src=[REF(src)];time=0'>Timing</A>" : "<A href='?src=[REF(src)];time=1'>Not Timing</A>")] [minute]:[second]"
+		dat += "<BR><A href='?src=[REF(src)];tp=-30'>-</A> <A href='?src=[REF(src)];tp=-1'>-</A> <A href='?src=[REF(src)];tp=1'>+</A> <A href='?src=[REF(src)];tp=30'>+</A>"
+		dat += "<BR><BR><A href='?src=[REF(src)];repeat=[(loop ? "0'>Stop repeating" : "1'>Set to repeat")]</A>"
+		dat += "<BR><BR><A href='?src=[REF(src)];refresh=1'>Refresh</A>"
+		dat += "<BR><BR><A href='?src=[REF(src)];close=1'>Close</A>"
+		var/datum/browser/popup = new(user, "timer", name)
+		popup.set_content(dat)
+		popup.open()
+
+
+/obj/item/assembly/timer/Topic(href, href_list)
+	..()
+	if(!usr.canUseTopic(src, BE_CLOSE))
+		usr << browse(null, "window=timer")
+		onclose(usr, "timer")
 		return
 
+	if(href_list["time"])
+		timing = text2num(href_list["time"])
+		if(timing && istype(holder, /obj/item/transfer_valve))
+			log_bomber(usr, "activated a", src, "attachment on [holder]")
 
-	Topic(href, href_list)
-		..()
-		if(!usr.canmove || usr.stat || usr.restrained() || !in_range(loc, usr))
-			usr << browse(null, "window=timer")
-			onclose(usr, "timer")
-			return
+		update_icon()
+	if(href_list["repeat"])
+		loop = text2num(href_list["repeat"])
 
-		if(href_list["time"])
-			timing = text2num(href_list["time"])
-			update_icon()
+	if(href_list["tp"])
+		var/tp = text2num(href_list["tp"])
+		time += tp
+		time = min(max(round(time), 1), 600)
+		saved_time = time
 
-		if(href_list["tp"])
-			var/tp = text2num(href_list["tp"])
-			time += tp
-			time = min(max(round(time), 1), 600)
-
-		if(href_list["close"])
-			usr << browse(null, "window=timer")
-			return
-
-		if(usr)
-			attack_self(usr)
-
+	if(href_list["close"])
+		usr << browse(null, "window=timer")
 		return
+
+	if(usr)
+		attack_self(usr)

@@ -3,20 +3,27 @@
 /obj/item/clothing/under/rank/bartender
 	desc = "It looks like it could use some more flair."
 	name = "bartender's uniform"
-	icon_state = "ba_suit"
-	item_state = "ba_suit"
-	item_color = "ba_suit"
-	flags = FPRINT | TABLEPASS | ONESIZEFITSALL
+	icon_state = "barman"
+	item_state = "bar_suit"
+	item_color = "barman"
+	alt_covers_chest = TRUE
 
+/obj/item/clothing/under/rank/bartender/purple
+	desc = "It looks like it has lots of flair!"
+	name = "purple bartender's uniform"
+	icon_state = "purplebartender"
+	item_state = "purplebartender"
+	item_color = "purplebartender"
+	can_adjust = FALSE
 
 /obj/item/clothing/under/rank/captain //Alright, technically not a 'civilian' but its better then giving a .dm file for a single define.
 	desc = "It's a blue jumpsuit with some gold markings denoting the rank of \"Captain\"."
 	name = "captain's jumpsuit"
 	icon_state = "captain"
-	item_state = "caparmor"
+	item_state = "b_suit"
 	item_color = "captain"
-	flags = FPRINT | TABLEPASS | ONESIZEFITSALL
-
+	sensor_mode = SENSOR_COORDS
+	random_sensor = FALSE
 
 /obj/item/clothing/under/rank/cargo
 	name = "quartermaster's jumpsuit"
@@ -25,14 +32,15 @@
 	item_state = "lb_suit"
 	item_color = "qm"
 
-
 /obj/item/clothing/under/rank/cargotech
 	name = "cargo technician's jumpsuit"
 	desc = "Shooooorts! They're comfy and easy to wear!"
 	icon_state = "cargotech"
 	item_state = "lb_suit"
 	item_color = "cargo"
-	flags = FPRINT | TABLEPASS | ONESIZEFITSALL
+	body_parts_covered = CHEST|GROIN|ARMS
+	mutantrace_variation = MUTANTRACE_VARIATION
+	alt_covers_chest = TRUE
 
 
 /obj/item/clothing/under/rank/chaplain
@@ -41,16 +49,14 @@
 	icon_state = "chaplain"
 	item_state = "bl_suit"
 	item_color = "chapblack"
-	flags = FPRINT | TABLEPASS | ONESIZEFITSALL
-
+	can_adjust = FALSE
 
 /obj/item/clothing/under/rank/chef
-	desc = "It's an apron which is given only to the most <b>hardcore</b> chefs in space."
-	name = "chef's uniform"
+	name = "cook's suit"
+	desc = "A suit which is given only to the most <b>hardcore</b> cooks in space."
 	icon_state = "chef"
 	item_color = "chef"
-	flags = FPRINT | TABLEPASS | ONESIZEFITSALL
-
+	alt_covers_chest = TRUE
 
 /obj/item/clothing/under/rank/clown
 	name = "clown suit"
@@ -58,9 +64,66 @@
 	icon_state = "clown"
 	item_state = "clown"
 	item_color = "clown"
-	flags = FPRINT | TABLEPASS | ONESIZEFITSALL
-	fitted = 0
+	fitted = FEMALE_UNIFORM_TOP
+	can_adjust = FALSE
 
+/obj/item/clothing/under/rank/blueclown
+	name = "blue clown suit"
+	desc = "<i>'BLUE HONK!'</i>"
+	icon_state = "blueclown"
+	item_state = "blueclown"
+	item_color = "blueclown"
+	fitted = FEMALE_UNIFORM_TOP
+	can_adjust = FALSE
+
+/obj/item/clothing/under/rank/greenclown
+	name = "green clown suit"
+	desc = "<i>'GREEN HONK!'</i>"
+	icon_state = "greenclown"
+	item_state = "greenclown"
+	item_color = "greenclown"
+	fitted = FEMALE_UNIFORM_TOP
+	can_adjust = FALSE
+
+/obj/item/clothing/under/rank/yellowclown
+	name = "yellow clown suit"
+	desc = "<i>'YELLOW HONK!'</i>"
+	icon_state = "yellowclown"
+	item_state = "yellowclown"
+	item_color = "yellowclown"
+	fitted = FEMALE_UNIFORM_TOP
+	can_adjust = FALSE
+
+/obj/item/clothing/under/rank/purpleclown
+	name = "purple clown suit"
+	desc = "<i>'PURPLE HONK!'</i>"
+	icon_state = "purpleclown"
+	item_state = "purpleclown"
+	item_color = "purpleclown"
+	fitted = FEMALE_UNIFORM_TOP
+	can_adjust = FALSE
+
+/obj/item/clothing/under/rank/orangeclown
+	name = "orange clown suit"
+	desc = "<i>'ORANGE HONK!'</i>"
+	icon_state = "orangeclown"
+	item_state = "orangeclown"
+	item_color = "orangeclown"
+	fitted = FEMALE_UNIFORM_TOP
+	can_adjust = FALSE
+
+/obj/item/clothing/under/rank/rainbowclown
+	name = "rainbow clown suit"
+	desc = "<i>'R A I N B O W HONK!'</i>"
+	icon_state = "rainbowclown"
+	item_state = "rainbowclown"
+	item_color = "rainbowclown"
+	fitted = FEMALE_UNIFORM_TOP
+	can_adjust = FALSE
+
+/obj/item/clothing/under/rank/clown/Initialize()
+	. = ..()
+	AddComponent(/datum/component/squeak, /datum/outputs/bikehorn, 50)
 
 /obj/item/clothing/under/rank/head_of_personnel
 	desc = "It's a jumpsuit worn by someone who works in the position of \"Head of Personnel\"."
@@ -68,8 +131,7 @@
 	icon_state = "hop"
 	item_state = "b_suit"
 	item_color = "hop"
-	flags = FPRINT | TABLEPASS | ONESIZEFITSALL
-
+	can_adjust = FALSE
 
 /obj/item/clothing/under/rank/hydroponics
 	desc = "It's a jumpsuit designed to protect against minor plant-related hazards."
@@ -77,78 +139,88 @@
 	icon_state = "hydroponics"
 	item_state = "g_suit"
 	item_color = "hydroponics"
-	permeability_coefficient = 0.50
-	flags = FPRINT | TABLEPASS | ONESIZEFITSALL
-
+	permeability_coefficient = 0.5
 
 /obj/item/clothing/under/rank/janitor
 	desc = "It's the official uniform of the station's janitor. It has minor protection from biohazards."
 	name = "janitor's jumpsuit"
 	icon_state = "janitor"
 	item_color = "janitor"
-	armor = list(melee = 0, bullet = 0, laser = 0,energy = 0, bomb = 0, bio = 10, rad = 0)
-	flags = FPRINT | TABLEPASS | ONESIZEFITSALL
-
+	armor = list("melee" = 0, "bullet" = 0, "laser" = 0,"energy" = 0, "bomb" = 0, "bio" = 10, "rad" = 0, "fire" = 0, "acid" = 0)
 
 /obj/item/clothing/under/lawyer
 	desc = "Slick threads."
 	name = "Lawyer suit"
-	flags = FPRINT | TABLEPASS
-
+	can_adjust = FALSE
 
 /obj/item/clothing/under/lawyer/black
 	icon_state = "lawyer_black"
 	item_state = "lawyer_black"
 	item_color = "lawyer_black"
 
-
 /obj/item/clothing/under/lawyer/female
 	icon_state = "black_suit_fem"
 	item_state = "black_suit_fem"
 	item_color = "black_suit_fem"
-
 
 /obj/item/clothing/under/lawyer/red
 	icon_state = "lawyer_red"
 	item_state = "lawyer_red"
 	item_color = "lawyer_red"
 
-
 /obj/item/clothing/under/lawyer/blue
 	icon_state = "lawyer_blue"
 	item_state = "lawyer_blue"
 	item_color = "lawyer_blue"
 
-
 /obj/item/clothing/under/lawyer/bluesuit
-	name = "Blue Suit"
-	desc = "A classy suit and tie"
+	name = "blue suit"
+	desc = "A classy suit and tie."
 	icon_state = "bluesuit"
 	item_state = "bluesuit"
 	item_color = "bluesuit"
-
+	can_adjust = TRUE
+	alt_covers_chest = TRUE
 
 /obj/item/clothing/under/lawyer/purpsuit
-	name = "Purple Suit"
+	name = "purple suit"
 	icon_state = "lawyer_purp"
 	item_state = "lawyer_purp"
 	item_color = "lawyer_purp"
-	fitted = 0
+	fitted = NO_FEMALE_UNIFORM
+	can_adjust = TRUE
+	alt_covers_chest = TRUE
 
-/obj/item/clothing/under/librarian
+/obj/item/clothing/under/lawyer/blacksuit
+	name = "black suit"
+	desc = "A professional black suit. Nanotrasen Investigation Bureau approved!"
+	icon_state = "blacksuit"
+	item_state = "bar_suit"
+	item_color = "blacksuit"
+	can_adjust = TRUE
+	alt_covers_chest = TRUE
+
+/obj/item/clothing/under/rank/curator
 	name = "sensible suit"
 	desc = "It's very... sensible."
 	icon_state = "red_suit"
 	item_state = "red_suit"
 	item_color = "red_suit"
+	can_adjust = FALSE
 
-/obj/item/clothing/under/mime
+/obj/item/clothing/under/rank/curator/treasure_hunter
+	name = "treasure hunter uniform"
+	desc = "A rugged uniform suitable for treasure hunting."
+	icon_state = "curator"
+	item_state = "curator"
+	item_color = "curator"
+
+/obj/item/clothing/under/rank/mime
 	name = "mime's outfit"
 	desc = "It's not very colourful."
 	icon_state = "mime"
 	item_state = "mime"
 	item_color = "mime"
-	flags = FPRINT | TABLEPASS | ONESIZEFITSALL
 
 /obj/item/clothing/under/rank/miner
 	desc = "It's a snappy jumpsuit with a sturdy set of overalls. It is very dirty."
@@ -156,3 +228,11 @@
 	icon_state = "miner"
 	item_state = "miner"
 	item_color = "miner"
+
+/obj/item/clothing/under/rank/miner/lavaland
+	desc = "A green uniform for operating in hazardous environments."
+	name = "shaft miner's jumpsuit"
+	icon_state = "explorer"
+	item_state = "explorer"
+	item_color = "explorer"
+	can_adjust = FALSE

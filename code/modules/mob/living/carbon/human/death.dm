@@ -1,97 +1,59 @@
-/mob/living/carbon/human/gib()
-	death(1)
-	var/atom/movable/overlay/animation = null
-	monkeyizing = 1
-	canmove = 0
-	icon = null
-	invisibility = 101
+/mob/living/carbon/human/gib_animation()
+	new /obj/effect/temp_visual/gib_animation(loc, "gibbed-h")
 
-	animation = new(loc)
-	animation.icon_state = "blank"
-	animation.icon = 'icons/mob/mob.dmi'
-	animation.master = src
+/mob/living/carbon/human/dust_animation()
+	new /obj/effect/temp_visual/dust_animation(loc, "dust-h")
 
-	flick("gibbed-h", animation)
-	hgibs(loc, viruses, dna)
+/mob/living/carbon/human/spawn_gibs(with_bodyparts)
+	if(with_bodyparts)
+		new /obj/effect/gibspawner/human(drop_location(), src, get_static_viruses())
+	else
+		new /obj/effect/gibspawner/human/bodypartless(drop_location(), src, get_static_viruses())
 
-	spawn(15)
-		if(animation)	del(animation)
-		if(src)			del(src)
-
-/mob/living/carbon/human/dust()
-	death(1)
-	var/atom/movable/overlay/animation = null
-	monkeyizing = 1
-	canmove = 0
-	icon = null
-	invisibility = 101
-
-	animation = new(loc)
-	animation.icon_state = "blank"
-	animation.icon = 'icons/mob/mob.dmi'
-	animation.master = src
-
-	flick("dust-h", animation)
-	new /obj/effect/decal/remains/human(loc)
-
-	spawn(15)
-		if(animation)	del(animation)
-		if(src)			del(src)
-
+/mob/living/carbon/human/spawn_dust(just_ash = FALSE)
+	if(just_ash)
+		new /obj/effect/decal/cleanable/ash(loc)
+	else
+		new /obj/effect/decal/remains/human(loc)
 
 /mob/living/carbon/human/death(gibbed)
-	if(stat == DEAD)	return
-	if(healths)		healths.icon_state = "health5"
-	stat = DEAD
+	if(stat == DEAD)
+		return
+	stop_sound_channel(CHANNEL_HEARTBEAT)
+	var/obj/item/organ/heart/H = getorganslot(ORGAN_SLOT_HEART)
+	if(H)
+		H.beat = BEAT_NONE
+
+	. = ..()
+
 	dizziness = 0
 	jitteriness = 0
 
-	if(istype(loc, /obj/mecha))
+	if(ismecha(loc))
 		var/obj/mecha/M = loc
 		if(M.occupant == src)
 			M.go_out()
 
-	if(!gibbed)
-		emote("deathgasp") //let the world KNOW WE ARE DEAD
+	dna.species.spec_death(gibbed, src)
 
-		//For ninjas exploding when they die./N
-		if( istype(wear_suit, /obj/item/clothing/suit/space/space_ninja) && wear_suit:s_initialized )
-			src << browse(null, "window=spideros")//Just in case.
-			var/location = loc
-			explosion(location, 1, 2, 3, 4)
-
-		update_canmove()
-		if(client)	blind.layer = 0
-
-	tod = worldtime2text()		//weasellos time of death patch
-	if(mind)	mind.store_memory("Time of death: [tod]", 0)
-	if(ticker && ticker.mode)
-//		world.log << "k"
-		sql_report_death(src)
-		ticker.mode.check_win()		//Calls the rounds wincheck, mainly for wizard, malf, and changeling now
-	return ..(gibbed)
+	if(SSticker.HasRoundStarted())
+		SSblackbox.ReportDeath(src)
+	if(is_devil(src))
+		INVOKE_ASYNC(is_devil(src), /datum/antagonist/devil.proc/beginResurrectionCheck, src)
+	if(is_hivemember(src))
+		remove_hivemember(src)
+	if(is_hivehost(src))
+		var/datum/antagonist/hivemind/hive = mind.has_antag_datum(/datum/antagonist/hivemind)
+		hive.destroy_hive()
 
 /mob/living/carbon/human/proc/makeSkeleton()
-	if(!check_dna_integrity(src) || (dna.mutantrace == "skeleton"))	return
-	dna.mutantrace = "skeleton"
-	status_flags |= DISFIGURED
-	update_hair()
-	update_body()
+	add_trait(TRAIT_DISFIGURED, TRAIT_GENERIC)
+	set_species(/datum/species/skeleton)
 	return 1
 
-/mob/living/carbon/proc/ChangeToHusk()
-	if(HUSK in mutations)	return
-	mutations.Add(HUSK)
-	status_flags |= DISFIGURED	//makes them unknown without fucking up other stuff like admintools
-	return 1
-
-/mob/living/carbon/human/ChangeToHusk()
-	. = ..()
-	if(.)
-		update_hair()
-		update_body()
 
 /mob/living/carbon/proc/Drain()
-	ChangeToHusk()
-	mutations |= NOCLONE
+	become_husk(CHANGELING_DRAIN)
+	add_trait(TRAIT_BADDNA, CHANGELING_DRAIN)
+	blood_volume = 0
 	return 1

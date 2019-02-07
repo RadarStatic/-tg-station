@@ -1,77 +1,30 @@
-/datum/hud/proc/larva_hud()
-	adding = list()
-	other = list()
+/datum/hud/larva
+	ui_style = 'icons/mob/screen_alien.dmi'
 
+/datum/hud/larva/New(mob/owner)
+	..()
 	var/obj/screen/using
 
-	using = new /obj/screen()
-	using.name = "act_intent"
+	using = new /obj/screen/act_intent/alien()
 	using.icon_state = mymob.a_intent
-	using.screen_loc = ui_acti
-	using.layer = 20
-	adding += using
+	static_inventory += using
 	action_intent = using
 
-	using = new /obj/screen()
-	using.name = "mov_intent"
-	using.icon = 'icons/mob/screen_alien.dmi'
-	using.icon_state = (mymob.m_intent == "run" ? "running" : "walking")
-	using.screen_loc = ui_movi
-	using.layer = 20
-	adding += using
-	move_intent = using
+	healths = new /obj/screen/healths/alien()
+	infodisplay += healths
 
-	mymob.oxygen = new /obj/screen()
-	mymob.oxygen.icon = 'icons/mob/screen_alien.dmi'
-	mymob.oxygen.icon_state = "oxy0"
-	mymob.oxygen.name = "oxygen"
-	mymob.oxygen.screen_loc = ui_alien_oxygen
+	alien_queen_finder = new /obj/screen/alien/alien_queen_finder()
+	infodisplay += alien_queen_finder
+	pull_icon = new /obj/screen/pull()
+	pull_icon.icon = 'icons/mob/screen_alien.dmi'
+	pull_icon.update_icon(mymob)
+	pull_icon.screen_loc = ui_above_movement
+	hotkeybuttons += pull_icon
 
-	mymob.toxin = new /obj/screen()
-	mymob.toxin.icon = 'icons/mob/screen_alien.dmi'
-	mymob.toxin.icon_state = "tox0"
-	mymob.toxin.name = "toxin"
-	mymob.toxin.screen_loc = ui_alien_toxin
+	using = new/obj/screen/language_menu
+	using.screen_loc = ui_alien_language_menu
+	static_inventory += using
 
-
-	mymob.fire = new /obj/screen()
-	mymob.fire.icon = 'icons/mob/screen_alien.dmi'
-	mymob.fire.icon_state = "fire0"
-	mymob.fire.name = "fire"
-	mymob.fire.screen_loc = ui_alien_fire
-
-
-	mymob.healths = new /obj/screen()
-	mymob.healths.icon = 'icons/mob/screen_alien.dmi'
-	mymob.healths.icon_state = "health0"
-	mymob.healths.name = "health"
-	mymob.healths.screen_loc = ui_alien_health
-
-	mymob.pullin = new /obj/screen()
-	mymob.pullin.icon = 'icons/mob/screen_alien.dmi'
-	mymob.pullin.icon_state = "pull0"
-	mymob.pullin.name = "pull"
-	mymob.pullin.screen_loc = ui_pull_resist
-
-	mymob.blind = new /obj/screen()
-	mymob.blind.icon = 'icons/mob/screen_full.dmi'
-	mymob.blind.icon_state = "blackimageoverlay"
-	mymob.blind.name = " "
-	mymob.blind.screen_loc = "1,1"
-	mymob.blind.layer = 0
-
-	mymob.flash = new /obj/screen()
-	mymob.flash.icon = 'icons/mob/screen_alien.dmi'
-	mymob.flash.icon_state = "blank"
-	mymob.flash.name = "flash"
-	mymob.flash.screen_loc = "1,1 to 15,15"
-	mymob.flash.layer = 17
-
-	mymob.zone_sel = new /obj/screen/zone_sel/alien()
-	mymob.zone_sel.icon = 'icons/mob/screen_alien.dmi'
-	mymob.zone_sel.update_icon()
-
-	mymob.client.screen = null
-
-	mymob.client.screen += list( mymob.zone_sel, mymob.oxygen, mymob.toxin, mymob.fire, mymob.healths, mymob.pullin, mymob.blind, mymob.flash) //, mymob.rest, mymob.sleep, mymob.mach )
-	mymob.client.screen += adding + other
+	zone_select = new /obj/screen/zone_sel/alien()
+	zone_select.update_icon(mymob)
+	static_inventory += zone_select

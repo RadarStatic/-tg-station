@@ -1,41 +1,13 @@
-/mob/living/silicon/gib()
-	death(1)
-	var/atom/movable/overlay/animation = null
-	monkeyizing = 1
-	canmove = 0
-	icon = null
-	invisibility = 101
+/mob/living/silicon/spawn_gibs()
+	new /obj/effect/gibspawner/robot(drop_location(), src)
 
-	animation = new(loc)
-	animation.icon_state = "blank"
-	animation.icon = 'icons/mob/mob.dmi'
-	animation.master = src
-
-//	flick("gibbed-r", animation)
-	robogibs(loc, viruses)
-
-	dead_mob_list -= src
-	spawn(15)
-		if(animation)	del(animation)
-		if(src)			del(src)
-
-/mob/living/silicon/dust()
-	death(1)
-	var/atom/movable/overlay/animation = null
-	monkeyizing = 1
-	canmove = 0
-	icon = null
-	invisibility = 101
-
-	animation = new(loc)
-	animation.icon_state = "blank"
-	animation.icon = 'icons/mob/mob.dmi'
-	animation.master = src
-
-//	flick("dust-r", animation)
+/mob/living/silicon/spawn_dust()
 	new /obj/effect/decal/remains/robot(loc)
 
-	dead_mob_list -= src
-	spawn(15)
-		if(animation)	del(animation)
-		if(src)			del(src)
+/mob/living/silicon/death(gibbed)
+	if(!gibbed)
+		emote("deathgasp")
+	diag_hud_set_status()
+	diag_hud_set_health()
+	update_health_hud()
+	return ..()

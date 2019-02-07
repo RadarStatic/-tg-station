@@ -1,66 +1,78 @@
+/mob/living/carbon/human/get_movespeed_modifiers()
+	var/list/considering = ..()
+	. = considering
+	if(has_trait(TRAIT_IGNORESLOWDOWN))
+		for(var/id in .)
+			var/list/data = .[id]
+			if(data[MOVESPEED_DATA_INDEX_FLAGS] & IGNORE_NOSLOW)
+				.[id] = data
+
 /mob/living/carbon/human/movement_delay()
-	var/tally = 0
+	. = ..()
+	if(dna && dna.species)
+		. += dna.species.movement_delay(src)
 
-	if(reagents.has_reagent("hyperzine")) return -1
+/mob/living/carbon/human/slip(knockdown_amount, obj/O, lube, paralyze, forcedrop)
+	if(has_trait(TRAIT_NOSLIPALL))
+		return 0
+	if (!(lube&GALOSHES_DONT_HELP))
+		if(has_trait(TRAIT_NOSLIPWATER))
+			return 0
+		if(shoes && istype(shoes, /obj/item/clothing))
+			var/obj/item/clothing/CS = shoes
+			if (CS.clothing_flags & NOSLIP)
+				return 0
+	return ..()
 
-	if(reagents.has_reagent("nuka_cola")) return -1
+/mob/living/carbon/human/experience_pressure_difference()
+	playsound(src, 'sound/effects/space_wind.ogg', 50, 1)
+	if(shoes && istype(shoes, /obj/item/clothing))
+		var/obj/item/clothing/S = shoes
+		if (S.clothing_flags & NOSLIP)
+			return 0
+	return ..()
 
-	if (istype(loc, /turf/space)) return -1 // It's hard to be slowed down in space by... anything
+/mob/living/carbon/human/mob_has_gravity()
+	. = ..()
+	if(!.)
+		if(mob_negates_gravity())
+			. = 1
 
-	var/health_deficiency = (100 - health - halloss)
-	if(health_deficiency >= 40) tally += (health_deficiency / 25)
+/mob/living/carbon/human/mob_negates_gravity()
+	return ((shoes && shoes.negates_gravity()) || (dna.species.negates_gravity(src)))
 
-	var/hungry = (500 - nutrition)/5 // So overeat would be 100 and default level would be 80
-	if (hungry >= 70) tally += hungry/50
-
-	if(wear_suit)
-		tally += wear_suit.slowdown
+/mob/living/carbon/human/Move(NewLoc, direct)
+	. = ..()
+	for(var/datum/mutation/human/HM in dna.mutations)
+		HM.on_move(NewLoc)
 
 	if(shoes)
-		tally += shoes.slowdown
-	
-	if(back)
-		tally += back.slowdown
+		if(mobility_flags & MOBILITY_STAND)
+			if(loc == NewLoc)
+				if(!has_gravity(loc))
+					return
+				var/obj/item/clothing/shoes/S = shoes
 
-	if(FAT in src.mutations)
-		tally += 1.5
-	if (bodytemperature < 283.222)
-		tally += (283.222 - bodytemperature) / 10 * 1.75
+				//Bloody footprints
+				var/turf/T = get_turf(src)
+				if(S.bloody_shoes && S.bloody_shoes[S.blood_state])
+					for(var/obj/effect/decal/cleanable/blood/footprints/oldFP in T)
+						if (oldFP.blood_state == S.blood_state)
+							return
+					//No oldFP or they're all a different kind of blood
+					S.bloody_shoes[S.blood_state] = max(0, S.bloody_shoes[S.blood_state] - BLOOD_LOSS_PER_STEP)
+					if (S.bloody_shoes[S.blood_state] > BLOOD_LOSS_IN_SPREAD)
+						var/obj/effect/decal/cleanable/blood/footprints/FP = new /obj/effect/decal/cleanable/blood/footprints(T)
+						FP.blood_state = S.blood_state
+						FP.entered_dirs |= dir
+						FP.bloodiness = S.bloody_shoes[S.blood_state] - BLOOD_LOSS_IN_SPREAD
+						FP.add_blood_DNA(S.return_blood_DNA())
+						FP.update_icon()
+					update_inv_shoes()
+				//End bloody footprints
+				S.step_action()
 
-	return (tally+config.human_delay)
-
-/mob/living/carbon/human/Process_Spacemove(var/check_drift = 0)
-	//Can we act
-	if(restrained())	return 0
-
-	//Do we have a working jetpack
-	if(istype(back, /obj/item/weapon/tank/jetpack))
-		var/obj/item/weapon/tank/jetpack/J = back
-		if(((!check_drift) || (check_drift && J.stabilization_on)) && (!lying) && (J.allow_thrust(0.01, src)))
-			inertia_dir = 0
-			return 1
-//		if(!check_drift && J.allow_thrust(0.01, src))
-//			return 1
-
-	//If no working jetpack then use the other checks
-	if(..())	return 1
-	return 0
-
-
-/mob/living/carbon/human/Process_Spaceslipping(var/prob_slip = 5)
-	//If knocked out we might just hit it and stop.  This makes it possible to get dead bodies and such.
-	if(stat)
-		prob_slip = 0 // Changing this to zero to make it line up with the comment, and also, make more sense.
-
-	//Do we have magboots or such on if so no slip
-	if(istype(shoes, /obj/item/clothing/shoes/magboots) && (shoes.flags & NOSLIP))
-		prob_slip = 0
-
-	//Check hands and mod slip
-	if(!l_hand)	prob_slip -= 2
-	else if(l_hand.w_class <= 2)	prob_slip -= 1
-	if (!r_hand)	prob_slip -= 2
-	else if(r_hand.w_class <= 2)	prob_slip -= 1
-
-	prob_slip = round(prob_slip)
-	return(prob_slip)
+/mob/living/carbon/human/Process_Spacemove(movement_dir = 0) //Temporary laziness thing. Will change to handles by species reee.
+	if(dna.species.space_move(src))
+		return TRUE
+	return ..()

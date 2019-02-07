@@ -1,204 +1,67 @@
-/* The old single tank bombs that dont really work anymore
-/obj/effect/spawner/bomb
-	name = "bomb"
-	icon = 'icons/mob/screen_gen.dmi'
-	icon_state = "x"
-	var/btype = 0  //0 = radio, 1= prox, 2=time
-	var/explosive = 1	// 0= firebomb
-	var/btemp = 500	// bomb temperature (degC)
-	var/active = 0
+#define CELSIUS_TO_KELVIN(T_K)	((T_K) + T0C)
 
-/obj/effect/spawner/bomb/radio
-	btype = 0
-
-/obj/effect/spawner/bomb/proximity
-	btype = 1
-
-/obj/effect/spawner/bomb/timer
-	btype = 2
-
-/obj/effect/spawner/bomb/timer/syndicate
-	btemp = 450
-
-/obj/effect/spawner/bomb/suicide
-	btype = 3
-
-/obj/effect/spawner/bomb/New()
-	..()
-
-	switch (src.btype)
-		// radio
-		if (0)
-			var/obj/item/assembly/r_i_ptank/R = new /obj/item/assembly/r_i_ptank(src.loc)
-			var/obj/item/weapon/tank/plasma/p3 = new /obj/item/weapon/tank/plasma(R)
-			var/obj/item/device/radio/signaler/p1 = new /obj/item/device/radio/signaler(R)
-			var/obj/item/device/igniter/p2 = new /obj/item/device/igniter(R)
-			R.part1 = p1
-			R.part2 = p2
-			R.part3 = p3
-			p1.master = R
-			p2.master = R
-			p3.master = R
-			R.status = explosive
-			p1.b_stat = 0
-			p2.secured = 1
-			p3.air_contents.temperature = btemp + T0C
-
-		// proximity
-		if (1)
-			var/obj/item/assembly/m_i_ptank/R = new /obj/item/assembly/m_i_ptank(src.loc)
-			var/obj/item/weapon/tank/plasma/p3 = new /obj/item/weapon/tank/plasma(R)
-			var/obj/item/device/prox_sensor/p1 = new /obj/item/device/prox_sensor(R)
-			var/obj/item/device/igniter/p2 = new /obj/item/device/igniter(R)
-			R.part1 = p1
-			R.part2 = p2
-			R.part3 = p3
-			p1.master = R
-			p2.master = R
-			p3.master = R
-			R.status = explosive
-
-			p3.air_contents.temperature = btemp + T0C
-			p2.secured = 1
-
-			if(src.active)
-				R.part1.secured = 1
-				R.part1.icon_state = text("motion[]", 1)
-				R.c_state(1, src)
-
-		// timer
-		if (2)
-			var/obj/item/assembly/t_i_ptank/R = new /obj/item/assembly/t_i_ptank(src.loc)
-			var/obj/item/weapon/tank/plasma/p3 = new /obj/item/weapon/tank/plasma(R)
-			var/obj/item/device/timer/p1 = new /obj/item/device/timer(R)
-			var/obj/item/device/igniter/p2 = new /obj/item/device/igniter(R)
-			R.part1 = p1
-			R.part2 = p2
-			R.part3 = p3
-			p1.master = R
-			p2.master = R
-			p3.master = R
-			R.status = explosive
-
-			p3.air_contents.temperature = btemp + T0C
-			p2.secured = 1
-		//bombvest
-		if(3)
-			var/obj/item/clothing/suit/armor/a_i_a_ptank/R = new /obj/item/clothing/suit/armor/a_i_a_ptank(src.loc)
-			var/obj/item/weapon/tank/plasma/p4 = new /obj/item/weapon/tank/plasma(R)
-			var/obj/item/device/healthanalyzer/p1 = new /obj/item/device/healthanalyzer(R)
-			var/obj/item/device/igniter/p2 = new /obj/item/device/igniter(R)
-			var/obj/item/clothing/suit/armor/vest/p3 = new /obj/item/clothing/suit/armor/vest(R)
-			R.part1 = p1
-			R.part2 = p2
-			R.part3 = p3
-			R.part4 = p4
-			p1.master = R
-			p2.master = R
-			p3.master = R
-			p4.master = R
-			R.status = explosive
-
-			p4.air_contents.temperature = btemp + T0C
-			p2.secured = 1
-
-	del(src)
-*/
+#define OPTIMAL_TEMP_K_PLA_BURN_SCALE(PRESSURE_P,PRESSURE_O,TEMP_O)	(((PRESSURE_P) * GLOB.meta_gas_info[/datum/gas/plasma][META_GAS_SPECIFIC_HEAT]) / (((PRESSURE_P) * GLOB.meta_gas_info[/datum/gas/plasma][META_GAS_SPECIFIC_HEAT] + (PRESSURE_O) * GLOB.meta_gas_info[/datum/gas/oxygen][META_GAS_SPECIFIC_HEAT]) / PLASMA_UPPER_TEMPERATURE - (PRESSURE_O) * GLOB.meta_gas_info[/datum/gas/oxygen][META_GAS_SPECIFIC_HEAT] / CELSIUS_TO_KELVIN(TEMP_O)))
+#define OPTIMAL_TEMP_K_PLA_BURN_RATIO(PRESSURE_P,PRESSURE_O,TEMP_O)	(CELSIUS_TO_KELVIN(TEMP_O) * PLASMA_OXYGEN_FULLBURN * (PRESSURE_P) / (PRESSURE_O))
 
 /obj/effect/spawner/newbomb
 	name = "bomb"
 	icon = 'icons/mob/screen_gen.dmi'
 	icon_state = "x"
-	var/btype = 0 // 0=radio, 1=prox, 2=time
-	var/btemp1 = 1500
-	var/btemp2 = 1000	// tank temperatures
+	var/temp_p = 1500
+	var/temp_o = 1000	// tank temperatures
+	var/pressure_p = 10 * ONE_ATMOSPHERE
+	var/pressure_o = 10 * ONE_ATMOSPHERE	//tank pressures
+	var/assembly_type
 
-	timer
-		btype = 2
+/obj/effect/spawner/newbomb/Initialize()
+	. = ..()
+	var/obj/item/transfer_valve/V = new(src.loc)
+	var/obj/item/tank/internals/plasma/PT = new(V)
+	var/obj/item/tank/internals/oxygen/OT = new(V)
 
-		syndicate
-			btemp1 = 150
-			btemp2 = 20
+	PT.air_contents.assert_gas(/datum/gas/plasma)
+	PT.air_contents.gases[/datum/gas/plasma][MOLES] = pressure_p*PT.volume/(R_IDEAL_GAS_EQUATION*CELSIUS_TO_KELVIN(temp_p))
+	PT.air_contents.temperature = CELSIUS_TO_KELVIN(temp_p)
 
-	proximity
-		btype = 1
+	OT.air_contents.assert_gas(/datum/gas/oxygen)
+	OT.air_contents.gases[/datum/gas/oxygen][MOLES] = pressure_o*OT.volume/(R_IDEAL_GAS_EQUATION*CELSIUS_TO_KELVIN(temp_o))
+	OT.air_contents.temperature = CELSIUS_TO_KELVIN(temp_o)
 
-	radio
-		btype = 0
+	V.tank_one = PT
+	V.tank_two = OT
+	PT.master = V
+	OT.master = V
 
+	if(assembly_type)
+		var/obj/item/assembly/A = new assembly_type(V)
+		V.attached_device = A
+		A.holder = V
 
-/obj/effect/spawner/newbomb/New()
-	..()
+	V.update_icon()
 
-	switch (src.btype)
-		// radio
-		if (0)
+	return INITIALIZE_HINT_QDEL
 
-			var/obj/item/device/transfer_valve/V = new(src.loc)
-			var/obj/item/weapon/tank/plasma/PT = new(V)
-			var/obj/item/weapon/tank/oxygen/OT = new(V)
+/obj/effect/spawner/newbomb/timer/syndicate/Initialize()
+	temp_p = (OPTIMAL_TEMP_K_PLA_BURN_SCALE(pressure_p, pressure_o, temp_o)/2 + OPTIMAL_TEMP_K_PLA_BURN_RATIO(pressure_p, pressure_o, temp_o)/2) - T0C
+	. = ..()
 
-			var/obj/item/device/assembly/signaler/S = new(V)
+/obj/effect/spawner/newbomb/timer
+	assembly_type = /obj/item/assembly/timer
 
-			V.tank_one = PT
-			V.tank_two = OT
-			V.attached_device = S
+/obj/effect/spawner/newbomb/timer/syndicate
+	pressure_o = TANK_LEAK_PRESSURE - 1
+	temp_o = 20
 
-			S.holder = V
-			S.toggle_secure()
-			PT.master = V
-			OT.master = V
+	pressure_p = TANK_LEAK_PRESSURE - 1
 
-			PT.air_contents.temperature = btemp1 + T0C
-			OT.air_contents.temperature = btemp2 + T0C
+/obj/effect/spawner/newbomb/proximity
+	assembly_type = /obj/item/assembly/prox_sensor
 
-			V.update_icon()
-
-		// proximity
-		if (1)
-
-			var/obj/item/device/transfer_valve/V = new(src.loc)
-			var/obj/item/weapon/tank/plasma/PT = new(V)
-			var/obj/item/weapon/tank/oxygen/OT = new(V)
-
-			var/obj/item/device/assembly/prox_sensor/P = new(V)
-
-			V.tank_one = PT
-			V.tank_two = OT
-			V.attached_device = P
-
-			P.holder = V
-			P.toggle_secure()
-			PT.master = V
-			OT.master = V
+/obj/effect/spawner/newbomb/radio
+	assembly_type = /obj/item/assembly/signaler
 
 
-			PT.air_contents.temperature = btemp1 + T0C
-			OT.air_contents.temperature = btemp2 + T0C
+#undef CELSIUS_TO_KELVIN
 
-			V.update_icon()
-
-
-		// timer
-		if (2)
-			var/obj/item/device/transfer_valve/V = new(src.loc)
-			var/obj/item/weapon/tank/plasma/PT = new(V)
-			var/obj/item/weapon/tank/oxygen/OT = new(V)
-
-			var/obj/item/device/assembly/timer/T = new(V)
-
-			V.tank_one = PT
-			V.tank_two = OT
-			V.attached_device = T
-
-			T.holder = V
-			T.toggle_secure()
-			PT.master = V
-			OT.master = V
-			T.time = 30
-
-			PT.air_contents.temperature = btemp1 + T0C
-			OT.air_contents.temperature = btemp2 + T0C
-
-			V.update_icon()
-	del(src)
+#undef OPTIMAL_TEMP_K_PLA_BURN_SCALE
+#undef OPTIMAL_TEMP_K_PLA_BURN_RATIO
